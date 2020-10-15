@@ -27,12 +27,17 @@
 
 **2)** В настройке "LDAP Kerberos Integration" в поле `Kerberos Realm ` через `,` перечисляются AD-домены,
  учётные данные пользователей которых будут считываться из данного LDAP-каталога или записываться в него. 
+ Один домен может присутствовать в нескольких настройках "LDAP User Federation". Если пользователь отсутствует
+ в хранилище Keycloak, то производится попытка считывания/создания учётки, в LDAP-каталогах, взятых из настроек
+ "LDAP User Federation" в порядке приоритета от наименьшего до первого успеха. Если пользователь загружен в хранилище
+ Keycloak из одного из LDAP-каталогов, то его учётка актуализируется по LDAP-каталогу из которого она изначально была загружена.
+ Первичная загрузка учётки может производиться в результате синхронизации по расписанию, настроенной в "LDAP User Federation". 
  
 **3)** В общем файле KeyTab должны быть ключи для SPN (Service Principal Name) всех доменов.
  
 **4)** Обязательно должен быть указан Kerberos реалм по-умолчанию. Либо через системное св-во
- [java.security.krb5.realm](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html)
-  Либо в файле krb5.conf. В случае Keycloak это имя домена может быть любым.
+ [java.security.krb5.realm](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html),
+  либо в файле krb5.conf. В случае Keycloak это имя домена может быть любым.
 ```
 [libdefaults]    
 	default_realm = ANY
@@ -58,7 +63,7 @@ sAMAccountName@domain
 [Статья, как выпускать keyTab для нескольких SPN.](https://blog.it-kb.ru/2017/03/24/how-to-create-keytab-file-with-additional-kerberos-service-principal-on-windows-server-and-linux/)
   
 Уточнение по KVNO в KeyTab. KVNO (Key Version Number) используется при поиске ключа в KeyTab, соответствующего
-предоставленному ST (Service Ticket), тоже содержащему свой KVNO. Обозначим KVNO в KeyTab как kv, в KVNO в ST как stv.
+предоставленному ST (Service Ticket), тоже содержащему свой KVNO. Обозначим KVNO в KeyTab как kv, а KVNO в ST как stv.
 При поиске ключа в KeyTab, по порядку перебираются ключи, соответствующие запрошенному алгоритму шифрования.
 Берётся первый ключ, удовлетворяющий нижеследующим условиям в порядке приоритета:
 - kv=0 ИЛИ stv=0

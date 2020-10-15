@@ -25,7 +25,6 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserManager;
 import org.keycloak.models.UserModel;
-import org.keycloak.models.UserProvider;
 import org.keycloak.models.cache.UserCache;
 import org.keycloak.storage.UserStorageProvider;
 import org.keycloak.storage.UserStorageProviderFactory;
@@ -59,8 +58,8 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
     @Override
     protected UserModel findOrCreateAuthenticatedUser(RealmModel realm, String principal) {
 
-        UserModel user = null;
-        MdLDAPStorageProvider suitableStorage = null;
+        UserModel user;
+        MdLDAPStorageProvider suitableStorage;
 
         /*
         username is sAMAccountName in AD
@@ -78,12 +77,12 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
         // and there's connection to the later LDAP Catalog
         // Global Catalog settings should has highest priority (is checked last)
         // N.B. Kerberos authN performs with lowest priority settings
-
+        List<MdLDAPStorageProvider> kerberosStorages = null;
         suitableStorage = this;
         if (!userDomain.isEmpty()){
-            List<MdLDAPStorageProvider> kerberosStorages = getKerberosStorageProviders(realm, userDomain);
-            logger.debugf("Storage providers for user's domain [%s]: [%s]", userDomain, kerberosStorages.toString());
-            if (kerberosStorages.size() >= 1) {
+            kerberosStorages = getKerberosStorageProviders(realm, userDomain);
+            logger.debugf("Storage providers for user's domain [%s]: %s", userDomain, kerberosStorages);
+            if (kerberosStorages.size() > 0) {
                 suitableStorage = kerberosStorages.get(0);
             }
         }
@@ -91,8 +90,21 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
         user = session.userLocalStorage().getUserByUsername(username, realm);
         if (user != null) {
             logger.debugf("Kerberos authenticated user [%s] found in Keycloak storage", principal);
+            if (kerberosStorages != null){
+                for (MdLDAPStorageProvider storage : kerberosStorages) {
+                    String storageId = storage.getModel().getId();
+                    if (storageId.equals(user.getFederationLink())){
+                        suitableStorage = storage;
+                        break;
+                    }
+                }
+            }
             if (!suitableStorage.getModel().getId().equals(user.getFederationLink())) {
-                logger.warnf("User with username [%s] already exists, but is not linked to provider [%s]", username, suitableStorage.getModel().getName());
+                logger.warnf("User [%s] linked to [%s] already exists, but is not linked to his domain providers %s",
+                        principal,
+                        user.getFederationLink(),
+                        kerberosStorages == null ? "[" + suitableStorage + ']' :  kerberosStorages
+                );
                 return null;
             }
             LDAPObject ldapObject = suitableStorage.loadAndValidateUser(realm, user);
@@ -111,8 +123,21 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
         }
 
         // Creating user to local storage
-        logger.debugf("Kerberos authenticated user [%s] not in Keycloak storage. Creating him in [%s]", principal, suitableStorage);
-        return suitableStorage.getUserByUsername(username, realm);
+        user = suitableStorage.getUserByUsername(username, realm);
+        if (user== null && kerberosStorages != null) {
+            for (int i = 0; user== null && i < kerberosStorages.size(); i++) {
+                MdLDAPStorageProvider storage = kerberosStorages.get(i);
+                if (!storage.equals(suitableStorage)) {
+                    user = storage.getUserByUsername(username, realm);
+                    suitableStorage = storage;
+                }
+            }
+        }
+        if (user != null){
+            logger.debugf("Kerberos authenticated user [%s] not in Keycloak storage. Creating him in [%s]", principal, suitableStorage);
+        }
+
+        return user;
     }
 
     private String getAuthenticatedUsername(String authenticatedKerberosPrincipal) {
@@ -185,6 +210,14 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
 
     @Override
     public String toString() {
-        return getModel().getName();
+        return getModel().getName() + " (" + getModel().getId() + ')';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof MdLDAPStorageProvider)) return false;
+        MdLDAPStorageProvider o = (MdLDAPStorageProvider) obj;
+        return getModel().getId().equals(o.getModel().getId());
     }
 }

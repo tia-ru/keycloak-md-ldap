@@ -20,6 +20,7 @@
         <jboss.logging.version>3.4.1.Final</jboss.logging.version>
         <junit.version>4.12</junit.version>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.keycloak</groupId>
@@ -47,12 +48,12 @@
             <version>${keycloak.version}</version>
             <scope>provided</scope>
         </dependency>
-    <!--    <dependency>
-            <groupId>org.keycloak</groupId>
-            <artifactId>keycloak-server-spi-private</artifactId>
-            <version>${keycloak.version}</version>
-            <scope>provided</scope>
-        </dependency>-->
+        <!--    <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-server-spi-private</artifactId>
+                <version>${keycloak.version}</version>
+                <scope>provided</scope>
+            </dependency>-->
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging</artifactId>
@@ -76,7 +77,9 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Dependencies>org.keycloak.keycloak-ldap-federation, org.keycloak.keycloak-kerberos-federation</Dependencies>
+                            <Dependencies>org.keycloak.keycloak-ldap-federation,
+                                org.keycloak.keycloak-kerberos-federation
+                            </Dependencies>
                         </manifestEntries>
                     </archive>
                 </configuration>
