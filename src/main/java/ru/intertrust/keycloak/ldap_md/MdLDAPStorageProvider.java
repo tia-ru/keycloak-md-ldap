@@ -56,7 +56,6 @@ import java.util.Map;
 public class MdLDAPStorageProvider extends LDAPStorageProvider
 {
     private static final Logger logger = Logger.getLogger(MdLDAPStorageProvider.class);
-    private String mappedUsernameLdapAttribute;
     private static final String LDAP_SEARCH_BY_KRB_USERNAME = "ldap.query.krb-username";
 
     public MdLDAPStorageProvider(MdLDAPStorageProviderFactory factory, KeycloakSession session, ComponentModel model, LDAPIdentityStore ldapIdentityStore) {
@@ -131,7 +130,7 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
                 ldapUser = storage.loadLDAPUserByKerberosPrincipal(realm, krbPrincipal);
                 if (ldapUser != null){
                     suitableStorage = storage;
-                    String username = MdLDAPUtils.getUsername(ldapUser, storage.getMappedUsernameLdapAttribute());
+                    String username = MdLDAPUtils.getUsername(ldapUser, storage.getMappedUsernameLdapAttribute(realm));
                     user = storage.getSession().userLocalStorage().getUserByUsername(username, realm);
                     //TODO check if user has same username with another user in different provider
 
@@ -146,7 +145,7 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
                 logger.warnf("User [%s] linked to [%s] already exists in Keycloak storage, but is not linked to his domain provider %s",
                         krbPrincipal,
                         user.getFederationLink(),
-                        kerberosStorages == null ? "provider [" + suitableStorage + ']' : "providers " + kerberosStorages
+                        kerberosStorages.size() <= 1 ? "provider [" + suitableStorage + ']' : "providers " + kerberosStorages
                 );
                 return null;
             }
@@ -154,7 +153,7 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
             if (ldapUser == null) {
                 ldapUser = suitableStorage.loadAndValidateUser(realm, user);
             } else {
-                ldapUser = validateUser(user, ldapUser);
+                ldapUser = validateUser(user, ldapUser, realm);
             }
             if (ldapUser != null) {
                 if (isMakeFederationLink && suitableStorage.getModel().isImportEnabled()){
@@ -178,7 +177,7 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
 
         // Creating user to local storage
         user = suitableStorage.getUserByKerberosPrincipal(krbPrincipal, realm);
-        if (user == null && kerberosStorages != null) {
+        if (user == null) {
             for (int i = 0; user == null && i < kerberosStorages.size(); i++) {
                 MdLDAPStorageProvider storage = kerberosStorages.get(i);
                 if (!storage.equals(suitableStorage)) {
@@ -220,12 +219,12 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
             ldapUser = loadLDAPUserByUsername(realm, username);
         }
         if (ldapUser != null) {
-            ldapUser = validateUser(userModel, ldapUser);
+            ldapUser = validateUser(userModel, ldapUser, realm);
         }
         return ldapUser;
     }
 
-    private LDAPObject validateUser(UserModel userModel, LDAPObject ldapUser) {
+    private LDAPObject validateUser(UserModel userModel, LDAPObject ldapUser, RealmModel realm) {
         LDAPUtils.checkUuid(ldapUser, ldapIdentityStore.getConfig());
 
         if (! ldapUser.getUuid().equals(userModel.getFirstAttribute(LDAPConstants.LDAP_ID))) {
@@ -233,8 +232,8 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
                     ldapUser.getUuid(), userModel.getFirstAttribute(LDAPConstants.LDAP_ID));
             return null;
         }
-        ldapUser = validateLdapUser(ldapUser);
-        return ldapUser;
+
+        return validateLdapUser(ldapUser, realm);
     }
 
     @Override
@@ -281,7 +280,7 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
             Condition condition = conditionsBuilder.orCondition(usernameCondition, krbUsernameCondition);
             ldapQuery.addWhereCondition(condition);*/
 
-            Condition condition = conditionsBuilder.equal(getMappedUsernameLdapAttribute(), username, EscapeStrategy.DEFAULT);
+            Condition condition = conditionsBuilder.equal(getMappedUsernameLdapAttribute(realm), username, EscapeStrategy.DEFAULT);
             ldapQuery.addWhereCondition(condition);
 
             LDAPObject ldapUser = ldapQuery.getFirstResult();
@@ -293,18 +292,18 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
     @Override
     protected UserModel importUserFromLDAP(KeycloakSession session, RealmModel realm, LDAPObject ldapUser) {
 
-        String ldapUsername = MdLDAPUtils.getUsername(ldapUser, getMappedUsernameLdapAttribute());
+        String ldapUsername = MdLDAPUtils.getUsername(ldapUser, getMappedUsernameLdapAttribute(realm));
         UserModel user = session.userLocalStorage().getUserByUsername(ldapUsername, realm);
         if (user != null && model.getId().equals(user.getFederationLink())
                 && (ldapUser.getUuid().equals(user.getFirstAttribute(LDAPConstants.LDAP_ID)))){
             return user;
         }
 
-        if( null == validateLdapUser(ldapUser)){
+        if( null == validateLdapUser(ldapUser, realm)){
             return null;
         }
         UserModel imported = super.importUserFromLDAP(session, realm, ldapUser);
-        if (null == validateUser(imported, ldapUser)){
+        if (null == validateUser(imported, ldapUser, realm)){
             return null;
         }
 
@@ -345,13 +344,13 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
         return krbUserName + '@' + domain;
     }
 
-    private LDAPObject validateLdapUser(LDAPObject ldapUser) {
-        String username = ldapUser.getAttributeAsString(getMappedUsernameLdapAttribute());
+    private LDAPObject validateLdapUser(LDAPObject ldapUser, RealmModel realm) {
+        String username = ldapUser.getAttributeAsString(getMappedUsernameLdapAttribute(realm));
         if (username == null){
             //logger.debugf("LDAP User invalid. Mapped user name is null");
             throw new ModelException("User returned from LDAP has null username! Check configuration of your LDAP provider '"
                     + model.getName() + "' and mapper 'user-attribute-ldap-mapper' for user model attribute 'username'."
-                    + " Mapped username LDAP attribute: " + getMappedUsernameLdapAttribute() + ", user DN: " + ldapUser.getDn());
+                    + " Mapped username LDAP attribute: " + getMappedUsernameLdapAttribute(realm) + ", user DN: " + ldapUser.getDn());
         }
         return ldapUser;
     }
@@ -382,9 +381,6 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
             ldapQuery.addWhereCondition(condition);
 
             LDAPObject ldapUser = ldapQuery.getFirstResult();
-            if (ldapUser == null) {
-                return null;
-            }
 
             return ldapUser;
         }
@@ -401,26 +397,6 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
             session.userLocalStorage().addFederatedIdentity(realm, imported, federatedIdentityModel);
         }
         return imported;
-    }
-
-    private String extractMappedUsernameLdapAttribute(RealmModel realm){
-        String ldapAttribute = "";
-        List<ComponentModel> mapperModels = realm.getComponents(model.getId(), LDAPStorageMapper.class.getName());
-        //List<ComponentModel> mapperModels = mapperManager.sortMappersAsc(mapperModels);
-        for (ComponentModel mapperModel : mapperModels) {
-            if (UserAttributeLDAPStorageMapperFactory.PROVIDER_ID.equals(mapperModel.getProviderId())) {
-                MultivaluedHashMap<String, String> config = mapperModel.getConfig();
-                String modelAttributeName = config.getFirst(UserAttributeLDAPStorageMapper.USER_MODEL_ATTRIBUTE);
-                if (UserModel.USERNAME.equals(modelAttributeName)) {
-                    ldapAttribute = config.getFirst(UserAttributeLDAPStorageMapper.LDAP_ATTRIBUTE);
-                    break;
-                }
-            }
-        }
-        if (ldapAttribute == null || ldapAttribute.isEmpty()){
-            ldapAttribute = getLdapIdentityStore().getConfig().getUsernameLdapAttribute();
-        }
-        return ldapAttribute;
     }
 
     @Override
@@ -460,7 +436,7 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
     @Override
     protected List<LDAPObject> searchLDAP(RealmModel realm, Map<String, String> attributes, int maxResults) {
 
-        List<LDAPObject> results = new ArrayList<LDAPObject>();
+        List<LDAPObject> results = new ArrayList<>();
         List<Condition> conditions = new ArrayList<>(4);
         LDAPQueryConditionsBuilder conditionsBuilder = new LDAPQueryConditionsBuilder();
         if (attributes.containsKey(UserModel.USERNAME)) {
@@ -525,10 +501,10 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
                 return Collections.emptyList();
             }
 
-            List<UserModel> searchResults = new LinkedList<UserModel>();
+            List<UserModel> searchResults = new LinkedList<>();
 
             for (LDAPObject ldapUser : ldapObjects) {
-                String username = MdLDAPUtils.getUsername(ldapUser, getMappedUsernameLdapAttribute());
+                String username = MdLDAPUtils.getUsername(ldapUser, getMappedUsernameLdapAttribute(realm));
                 UserModel localUser = session.userLocalStorage().getUserByUsername(username, realm);
                 if (localUser == null) {
                     UserModel imported = importUserFromLDAP(session, realm, ldapUser);
@@ -590,12 +566,26 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
         return result;
     }
 
-    public String getMappedUsernameLdapAttribute() {
-        // Lazy load . Initialisation in constructor leads to NPE on session.getContext().getRealm()
-        if (mappedUsernameLdapAttribute == null){
-            mappedUsernameLdapAttribute = extractMappedUsernameLdapAttribute(session.getContext().getRealm());
+    public String getMappedUsernameLdapAttribute(RealmModel realm) {
+
+        String ldapAttribute = "";
+        List<ComponentModel> mapperModels = realm.getComponents(model.getId(), LDAPStorageMapper.class.getName());
+        //List<ComponentModel> mapperModels = mapperManager.sortMappersAsc(mapperModels);
+        for (ComponentModel mapperModel : mapperModels) {
+            if (UserAttributeLDAPStorageMapperFactory.PROVIDER_ID.equals(mapperModel.getProviderId())) {
+                MultivaluedHashMap<String, String> config = mapperModel.getConfig();
+                String modelAttributeName = config.getFirst(UserAttributeLDAPStorageMapper.USER_MODEL_ATTRIBUTE);
+                if (UserModel.USERNAME.equals(modelAttributeName)) {
+                    ldapAttribute = config.getFirst(UserAttributeLDAPStorageMapper.LDAP_ATTRIBUTE);
+                    break;
+                }
+            }
         }
-        return mappedUsernameLdapAttribute;
+        if (ldapAttribute == null || ldapAttribute.isEmpty()){
+            ldapAttribute = getLdapIdentityStore().getConfig().getUsernameLdapAttribute();
+        }
+        return ldapAttribute;
+
     }
 
     private String extractUsername(String authenticatedKerberosPrincipal) {
@@ -632,7 +622,9 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
         List<T> list = new ArrayList<>(userStorageProviders.size());
         for (UserStorageProviderModel model : userStorageProviders) {
             if (!model.isEnabled()) continue;
-            UserStorageProviderFactory factory = (UserStorageProviderFactory) session.getKeycloakSessionFactory().getProviderFactory(UserStorageProvider.class, model.getProviderId());
+            UserStorageProviderFactory<? extends UserStorageProvider> factory =
+                    (UserStorageProviderFactory<? extends UserStorageProvider>)
+                            session.getKeycloakSessionFactory().getProviderFactory(UserStorageProvider.class, model.getProviderId());
             if (factory == null) {
                 logger.warnv("Configured UserStorageProvider {0} of provider id {1} does not exist in realm {2}", model.getName(), model.getProviderId(), realm.getName());
                 continue;
@@ -644,7 +636,11 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
         return list;
     }
 
-    private static UserStorageProvider getStorageProviderInstance(KeycloakSession session, UserStorageProviderModel model, UserStorageProviderFactory factory) {
+    private static UserStorageProvider getStorageProviderInstance(
+            KeycloakSession session,
+            UserStorageProviderModel model,
+            UserStorageProviderFactory<? extends UserStorageProvider> factory) {
+
         UserStorageProvider instance = (UserStorageProvider)session.getAttribute(model.getId());
         if (instance != null) return instance;
         instance = factory.create(session, model);

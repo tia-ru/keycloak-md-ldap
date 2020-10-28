@@ -90,7 +90,7 @@ public class MdLDAPStorageProviderFactory extends LDAPStorageProviderFactory {
         super.onCreate(session, realm, model);
         LDAPConfig ldapConfig = new LDAPConfig(model.getConfig());
        /* UserStorageProviderModel providerModel = new UserStorageProviderModel(model);
-        boolean importEnabled = providerModel.isImportEnabled()*/;
+        boolean importEnabled = providerModel.isImportEnabled();*/
 
         UserStorageProvider.EditMode editMode = ldapConfig.getEditMode();
         String readOnly = String.valueOf(editMode == UserStorageProvider.EditMode.READ_ONLY || editMode == UserStorageProvider.EditMode.UNSYNCED);
@@ -223,7 +223,7 @@ public class MdLDAPStorageProviderFactory extends LDAPStorageProviderFactory {
                     session.getContext().setRealm(currentRealm);
 
                     //String username = LDAPUtils.getUsername(ldapUser, ldapFedProvider.getLdapIdentityStore().getConfig());
-                    String username = MdLDAPUtils.getUsername(ldapUser, ldapFedProvider.getMappedUsernameLdapAttribute());
+                    String username = MdLDAPUtils.getUsername(ldapUser, ldapFedProvider.getMappedUsernameLdapAttribute(currentRealm));
                     exists.value = true;
                     LDAPUtils.checkUuid(ldapUser, ldapFedProvider.getLdapIdentityStore().getConfig());
                     UserModel currentUser = session.userLocalStorage().getUserByUsername(username, currentRealm);
@@ -274,7 +274,7 @@ public class MdLDAPStorageProviderFactory extends LDAPStorageProviderFactory {
                             String username = null;
                             try {
                                 //username = LDAPUtils.getUsername(ldapUser, ldapFedProvider.getLdapIdentityStore().getConfig());
-                                username = MdLDAPUtils.getUsername(ldapUser, ldapFedProvider.getMappedUsernameLdapAttribute());
+                                username = MdLDAPUtils.getUsername(ldapUser, ldapFedProvider.getMappedUsernameLdapAttribute(currentRealm));
                             } catch (ModelException ignore) {
                             }
 
