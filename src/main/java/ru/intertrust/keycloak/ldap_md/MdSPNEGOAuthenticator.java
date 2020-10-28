@@ -37,11 +37,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 /**
- * The only difference with {@link org.keycloak.federation.kerberos.impl.SPNEGOAuthenticator}
- * is the method {@link #getAuthenticatedUsername} returns the {@link #authenticatedKerberosPrincipal} instead of username part of it.
- * A result of {@link #getAuthenticatedUsername} is used by {@link MdLDAPStorageProvider} to extract user domain.
- *
- * @author Ilya Tugushev
+ * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
  */
 public class MdSPNEGOAuthenticator extends org.keycloak.federation.kerberos.impl.SPNEGOAuthenticator{
 
@@ -113,7 +109,7 @@ public class MdSPNEGOAuthenticator extends org.keycloak.federation.kerberos.impl
     }
 
     /**
-     * @return username to be used in Keycloak. Username is authenticated kerberos principal without realm name
+     * @return Authenticated kerberos principal (with realm name)
      */
     public String getAuthenticatedUsername() {
         return authenticatedKerberosPrincipal;

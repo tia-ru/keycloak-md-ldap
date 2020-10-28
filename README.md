@@ -25,23 +25,45 @@
 >**Примечание**. В текущей версии Keycloak (11.0.2) на этапе Kerberos-аутентификации применяется только одна настройка
 "LDAP Kerberos Integration", имеющая наименьший приоритет. Значения этих 2 полей в других настройках значения не имеют.*
 
-**2)** В настройке "LDAP Kerberos Integration" в поле `Kerberos Realm ` через `,` перечисляются AD-домены,
+**2)** В настройке "LDAP Kerberos Integration" в поле `Kerberos Realm ` через "`,`" (запятую) перечисляются AD-домены,
  учётные данные пользователей которых будут считываться из данного LDAP-каталога или записываться в него. 
  Один домен может присутствовать в нескольких настройках "LDAP User Federation". Если пользователь отсутствует
- в хранилище Keycloak, то производится попытка считывания/создания учётки, в LDAP-каталогах, взятых из настроек
- "LDAP User Federation" в порядке приоритета от наименьшего до первого успеха. Если пользователь загружен в хранилище
- Keycloak из одного из LDAP-каталогов, то его учётка актуализируется по LDAP-каталогу из которого она изначально была загружена.
- Первичная загрузка учётки может производиться в результате синхронизации по расписанию, настроенной в "LDAP User Federation". 
+ в хранилище Keycloak, то берутся "LDAP User Federation" соответствующие домену пользователя и в порядке приоритета от
+ наименьшего до первого успеха производится попытка считывания учётки соответствующих в LDAP-каталогах.
+ Если учётка пользователя уже загружена в хранилище Keycloak из одного из LDAP-каталогов ранее, то она актуализируется 
+ по LDAP-каталогу из которого была изначально загружена. Первичная загрузка учётки может произойти в результате 
+ синхронизации по расписанию, настроенной в "LDAP User Federation" или при запуске синхронизации в ручную по кнопке
+ "Synchronize all users" или "Synchronize changed users" в "LDAP User Federation". 
+
+**3)** В настройке "LDAP Kerberos Integration" в поле "Username Attribute in LDAP" должно быть задано имя атрибута в LDAP,
+ содержащего значение Kerberos principal name, передаваемого в kerberos-токене без или с именем домена. Для AD
+ значением ДОЛЖНО быть sAMAccountName.
+
+**4)** В качестве уникального имени пользователя в Keycloak (значение поле "User name") при импорте из LDAP по-умолчанию
+используется значение из атрибута, заданного в поле "Username Attribute in LDAP". Используемый атрибут LDAP можно
+переопределить, создав mapper типа "user-attribute-ldap-mapper" в настройке "LDAP Kerberos Integration". 
+В настройке mapper в поле "User Model Attribute" указывается значение "username", а в поле "LDAP Attribute"
+имя атрибута в LDAP-каталоге содержащего уникальное имя пользователя. Для AD обычно используют атрибут CN или userPrincipalName.
+Если при создании настройки "LDAP Kerberos Integration" в качестве провайдера указано "Active Directory",
+то такой mapper будет добавлен автоматически под именем "username" и с атрибутом CN в LDAP.   
+
+>**Важно.**
+>
+>Если "Authentication Flow" допускает, что пользователи могут аутентифицироваться не только через
+>Kerberos, то уникальные имена пользователей, импортированные из разных LDAP-каталогов, должны оказаться уникальными
+>среди всех учётных записей в Keycloak.
+  
+**5)** В общем файле KeyTab должны быть ключи для SPN (Service Principal Name) всех доменов.
  
-**3)** В общем файле KeyTab должны быть ключи для SPN (Service Principal Name) всех доменов.
- 
-**4)** Обязательно должен быть указан Kerberos реалм по-умолчанию. Либо через системное св-во
+**6)** Обязательно должен быть указан Kerberos реалм по-умолчанию. Либо через системное св-во
  [java.security.krb5.realm](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html),
   либо в файле krb5.conf. В случае Keycloak это имя домена может быть любым.
 ```
 [libdefaults]    
 	default_realm = ANY
 ```
+ 
+ 
 Установка провайдера в Keycloak
 -----------
   Следуйте [официальной инструкции](https://www.keycloak.org/docs/latest/server_development/#registering-provider-implementations).
@@ -59,6 +81,10 @@ sAMAccountName@domain
 Для этого в настройке `LDAP User Federation` в поле `Username LDAP attribute`  следует указать `sAMAccountName`
 и на закладке `Mappers` для мэппера `username` в поле `LDAP Attribute` тоже указать `sAMAccountName`.
 
+Чтобы не импортировать системные учётные записи Active Directory в "Custom LDAP users filter" рекомендуется добавить условие:
+``` 
+ (!(isCriticalSystemObject=TRUE))
+```
 **2)** 
 [Статья, как выпускать keyTab для нескольких SPN.](https://blog.it-kb.ru/2017/03/24/how-to-create-keytab-file-with-additional-kerberos-service-principal-on-windows-server-and-linux/)
   
