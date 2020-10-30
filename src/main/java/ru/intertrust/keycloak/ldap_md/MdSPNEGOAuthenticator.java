@@ -37,7 +37,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 /**
- * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
+ *
  */
 public class MdSPNEGOAuthenticator extends org.keycloak.federation.kerberos.impl.SPNEGOAuthenticator{
 
@@ -119,7 +119,7 @@ public class MdSPNEGOAuthenticator extends org.keycloak.federation.kerberos.impl
 
         @Override
         public Boolean run() throws Exception {
-            Boolean result = false;
+            Boolean result = Boolean.FALSE;
             GSSContext gssContext = null;
             try {
                 if (log.isTraceEnabled()) {
@@ -137,7 +137,7 @@ public class MdSPNEGOAuthenticator extends org.keycloak.federation.kerberos.impl
                         if (gssContext.getCredDelegState()) {
                             delegationCredential = gssContext.getDelegCred();
                         }
-                        result = true;
+                        result = Boolean.TRUE;
                     }
 
                 }
@@ -170,16 +170,16 @@ public class MdSPNEGOAuthenticator extends org.keycloak.federation.kerberos.impl
 
     protected void logAuthDetails(GSSContext gssContext) throws GSSException {
         if (log.isDebugEnabled()) {
-            String message = new StringBuilder("SPNEGO Security context accepted with token: " + responseToken)
-                    .append(", established: ").append(gssContext.isEstablished())
-                    .append(", credDelegState: ").append(gssContext.getCredDelegState())
-                    .append(", mutualAuthState: ").append(gssContext.getMutualAuthState())
-                    .append(", lifetime: ").append(gssContext.getLifetime())
-                    .append(", confState: ").append(gssContext.getConfState())
-                    .append(", integState: ").append(gssContext.getIntegState())
-                    .append(", srcName: ").append(gssContext.getSrcName())
-                    .append(", targName: ").append(gssContext.getTargName())
-                    .toString();
+            String message = "SPNEGO Security context accepted with token: " +
+                    responseToken +
+                    ", established: " + gssContext.isEstablished() +
+                    ", credDelegState: " + gssContext.getCredDelegState() +
+                    ", mutualAuthState: " + gssContext.getMutualAuthState() +
+                    ", lifetime: " + gssContext.getLifetime() +
+                    ", confState: " + gssContext.getConfState() +
+                    ", integState: " + gssContext.getIntegState() +
+                    ", srcName: " + gssContext.getSrcName() +
+                    ", targName: " + gssContext.getTargName();
             log.debug(message);
         }
     }

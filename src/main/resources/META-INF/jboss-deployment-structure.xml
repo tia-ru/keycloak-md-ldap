@@ -15,10 +15,7 @@
   ~ limitations under the License.
   -->
 
-<jboss-deployment-structure xmlns="urn:jboss:deployment-structure:1.2">
-    <!--<properties>
-        <property name="jboss.api" value="private"/>
-    </properties>-->
+<jboss-deployment-structure>
     <deployment>
         <dependencies>
             <module name="org.keycloak.keycloak-ldap-federation"/>
