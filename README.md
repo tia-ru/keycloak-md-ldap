@@ -1,5 +1,5 @@
-Провайдер "keycloak-md-ldap-federation" для Keycloak  
-====================================================================================
+# Провайдер "keycloak-md-ldap-federation" для Keycloak  
+
 
 Штатный провайдер "LDAP User Federation" (LDAPFederationProvider), на практике работает только
 если создана одна настройка "LDAP User Federation". Т.о. позволяет аутентифицировать по Kerberos 
@@ -15,8 +15,8 @@ Global LDAP-каталог также не требуется.
 Поведение KerberosFederationProvider (с идентификатором 'kerberos') останется без изменений.
 
 
-Настройка 
----------
+## Настройка
+
 Следуйте [официальной инструкции](https://www.keycloak.org/docs/latest/server_admin/#setup-and-configuration-of-keycloak-server). 
 Для правильной работы данного провайдера есть дополнительные требования:
 
@@ -76,22 +76,21 @@ sAMAccountName@domain
  
 **6)** Обязательно должен быть указан Kerberos реалм по-умолчанию. Либо через системное св-во
  [java.security.krb5.realm](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html),
-  либо в файле krb5.conf. В случае Keycloak это имя домена может быть любым.
+  либо в файле krb5.conf. В случае Keycloak это имя домена может быть произвольным.
 ```
 [libdefaults]    
 	default_realm = ANY
 ```
  
  
-Установка провайдера в Keycloak
------------
+## Установка провайдера в Keycloak
   Следуйте [официальной инструкции](https://www.keycloak.org/docs/latest/server_development/#registering-provider-implementations).
   Самый простой способ - это  поместить jar-файл провайдера в папку `standalone/deploymens` Keycloak.
 
 > **Важно** Данный провайдер должен запускаться после штатного LDAPFederationProvider. 
  
-Примечания
------------
+## Примечания
+
 **1)** SPN (имя сервиса) привязываемое к учётке в AD для Keycloak должно иметь формат:
 ```
 HTTP/<DNS-имя сервера Keycloak>
