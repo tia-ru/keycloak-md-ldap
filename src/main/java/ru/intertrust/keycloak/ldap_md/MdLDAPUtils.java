@@ -37,7 +37,8 @@ public enum MdLDAPUtils {
         }
         String[] split = REALMS_SEPARATOR.split(kerberosConfig.getKerberosRealm());
         List<String> result = new ArrayList<>(split.length);
-        for (String s : split) {
+        for (int i = 0; i < split.length; i++) {
+            String s = split[i];
             String aCase = s.trim().toUpperCase();
             if (!aCase.isEmpty()) {
                 result.add(aCase);

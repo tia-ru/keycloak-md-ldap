@@ -257,7 +257,7 @@ public class MdLDAPStorageProvider extends LDAPStorageProvider
             Condition condition;
             LDAPQueryConditionsBuilder conditionsBuilder = new LDAPQueryConditionsBuilder();
 
-            if (userAttr.equals(domainAttr)){
+            if (userAttr.equalsIgnoreCase(domainAttr)){
                 condition = conditionsBuilder.equal(userAttr, krbPrincipal, EscapeStrategy.DEFAULT);
                 ldapQuery.addWhereCondition(condition);
             } else {

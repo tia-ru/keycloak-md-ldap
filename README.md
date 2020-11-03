@@ -25,6 +25,8 @@ Global LDAP-каталог также не требуется.
 - `Server Pricipal` = `*` (звезда)
 - `KeyTab`=`<file>` (один общий KeyTab файл)
 
+![](doc/images/krb-principal.png "Kerberos Integration")
+
 >**Примечание**. В текущей версии Keycloak (11.0.2) на этапе Kerberos-аутентификации применяется только одна настройка
 "LDAP User Federation", имеющая наименьший приоритет. Значения этих 2 полей в других настройках значения не имеют.
 
@@ -40,6 +42,8 @@ Global LDAP-каталог также не требуется.
 
 **3)** В настройке "LDAP User Federation" должен быть мэппер типа `kerberos-principal-ldap-mapper` для сопоставления
 LDAP-атрибутов с идентификатором пользователя в токене Kerberos.
+
+![](doc/images/krb-mapper.png "Kerberos principal mapper")
 
 В конфигурации мэппера в поле `Kerberos Username LDAP Attribute` указывается имя LDAP-атрибута,
 содержащего часть с именем пользователя.
@@ -65,6 +69,8 @@ sAMAccountName@domain
 
 Если при создании настройки "LDAP Kerberos Integration" в качестве провайдера указано "Active Directory",
 то такой мэппер будет добавлен автоматически под именем "username".   
+
+![](doc/images/username-mapper.png "Username mapper")
 
 >**Важно.**
 >
@@ -104,6 +110,7 @@ HTTP/<DNS-имя сервера Keycloak>@<имя домена>
 ``` 
  (!(isCriticalSystemObject=TRUE))
 ```
+
 **3)** 
 [Статья, как выпускать keyTab для нескольких SPN.](https://blog.it-kb.ru/2017/03/24/how-to-create-keytab-file-with-additional-kerberos-service-principal-on-windows-server-and-linux/)
   
